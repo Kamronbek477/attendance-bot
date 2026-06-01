@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Davomat Mini App Bot
 
 ## Fayllar
@@ -57,3 +58,7 @@ git push -u origin main
 ## Admin uchun
 - "Bugungi davomat" → kim kelgan, qaysi vaqtda
 - "Ofis lokatsiyasini o'rnatish" → koordinata yuborish (`LAT LON`)
+=======
+# attendance-bot
+davomatdan otish uchun
+>>>>>>> 8f9be7f1a96264db5c885310d2112212b2ef7cd8
