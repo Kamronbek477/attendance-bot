@@ -1,8 +1,8 @@
 import os
-from flask import Flask, render_template_string, request, jsonify
+import threading
+from flask import Flask, render_template_string
 
 app = Flask(__name__)
-WEBAPP_URL = os.environ.get("WEBAPP_URL", "https://YOUR_APP.railway.app")
 
 HTML = """<!DOCTYPE html>
 <html lang="uz">
@@ -46,19 +46,9 @@ HTML = """<!DOCTYPE html>
   }
   .btn:disabled { opacity: 0.5; cursor: not-allowed; }
   .btn:active:not(:disabled) { opacity: 0.8; }
-  .status {
-    margin-top: 16px;
-    font-size: 14px;
-    min-height: 20px;
-    opacity: 0.7;
-  }
+  .status { margin-top: 16px; font-size: 14px; min-height: 20px; opacity: 0.7; }
   .status.error { color: #e53935; opacity: 1; }
-  .status.success { color: #43a047; opacity: 1; }
-  .accuracy {
-    margin-top: 8px;
-    font-size: 12px;
-    opacity: 0.5;
-  }
+  .accuracy { margin-top: 8px; font-size: 12px; opacity: 0.5; }
   .spinner {
     display: inline-block;
     width: 18px; height: 18px;
@@ -74,14 +64,13 @@ HTML = """<!DOCTYPE html>
 </head>
 <body>
 <div class="card">
-  <div class="icon" id="icon">📍</div>
-  <h1 id="title">Davomat tasdiqlash</h1>
-  <p class="sub" id="sub">Tugmani bosing — joylashuvingiz avtomatik aniqlanadi va ofisga masofangiz tekshiriladi.</p>
+  <div class="icon">📍</div>
+  <h1>Davomat tasdiqlash</h1>
+  <p class="sub">Tugmani bosing — joylashuvingiz avtomatik aniqlanadi va ofisga masofangiz tekshiriladi.</p>
   <button class="btn" id="btn" onclick="checkin()">✅ Ishga keldim</button>
   <div class="status" id="status"></div>
   <div class="accuracy" id="accuracy"></div>
 </div>
-
 <script>
 const tg = window.Telegram.WebApp;
 tg.ready();
@@ -112,18 +101,13 @@ function checkin() {
       const lat = pos.coords.latitude;
       const lon = pos.coords.longitude;
       const acc = Math.round(pos.coords.accuracy);
-
       document.getElementById('accuracy').textContent = 'Aniqlik: ±' + acc + ' metr';
-
-      // GPS aniqlik juda past bo'lsa ogohlantirish
-      if (acc > 200) {
+      if (acc > 300) {
         setStatus('⚠️ GPS signali zaif. Tashqariga chiqib qayta urining.', 'error');
         btn.disabled = false;
         btn.textContent = '🔄 Qayta urinish';
         return;
       }
-
-      // Ma'lumotni botga yuborish
       tg.sendData(JSON.stringify({ lat: lat, lon: lon, accuracy: acc }));
     },
     function(err) {
@@ -136,11 +120,7 @@ function checkin() {
       };
       setStatus(msgs[err.code] || '❌ GPS xatosi', 'error');
     },
-    {
-      enableHighAccuracy: true,
-      timeout: 15000,
-      maximumAge: 0
-    }
+    { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
   );
 }
 </script>
@@ -153,8 +133,25 @@ def checkin_page():
 
 @app.route("/health")
 def health():
-    return jsonify({"status": "ok"})
+    return "OK", 200
+
+@app.route("/")
+def index():
+    return "Davomat Bot ishlayapti!", 200
+
+def run_bot():
+    """Botni alohida threadda ishga tushirish"""
+    try:
+        from bot import main as bot_main
+        bot_main()
+    except Exception as e:
+        print(f"Bot xatosi: {e}")
 
 if __name__ == "__main__":
+    # Botni background threadda ishga tushir
+    bot_thread = threading.Thread(target=run_bot, daemon=True)
+    bot_thread.start()
+    
+    # Flaskni asosiy threadda ishga tushir
     port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port)
+    app.run(host="0.0.0.0", port=port, debug=False)
