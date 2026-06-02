@@ -1,5 +1,6 @@
 import os
 import threading
+import asyncio
 from flask import Flask, render_template_string
 
 app = Flask(__name__)
@@ -116,7 +117,7 @@ function checkin() {
       const msgs = {
         1: '❌ GPS ruxsati berilmagan. Telefon sozlamalaridan ruxsat bering.',
         2: '❌ Joylashuv aniqlanmadi. Tashqariga chiqib qayta urining.',
-        3: '❌ Vaqt tugadi. Qayta urinib ko\'ring.'
+        3: "❌ Vaqt tugadi. Qayta urinib ko'ring."
       };
       setStatus(msgs[err.code] || '❌ GPS xatosi', 'error');
     },
@@ -140,18 +141,19 @@ def index():
     return "Davomat Bot ishlayapti!", 200
 
 def run_bot():
-    """Botni alohida threadda ishga tushirish"""
+    """Botni yangi event loop da ishga tushirish"""
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
     try:
         from bot import main as bot_main
-        bot_main()
+        loop.run_until_complete(bot_main())
     except Exception as e:
         print(f"Bot xatosi: {e}")
+    finally:
+        loop.close()
 
 if __name__ == "__main__":
-    # Botni background threadda ishga tushir
     bot_thread = threading.Thread(target=run_bot, daemon=True)
     bot_thread.start()
-    
-    # Flaskni asosiy threadda ishga tushir
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=False)

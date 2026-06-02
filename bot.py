@@ -8,8 +8,8 @@ from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQu
 # ══════════════════════════════════════════════
 #  SOZLAMALAR
 # ══════════════════════════════════════════════
-TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "6143132501:AAF-1TEVnNuKTR1sHT6-8lVo2MdSl9ZvyVM")
-ADMIN_ID           = int(os.environ.get("ADMIN_ID", "1993623102"))
+TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "SIZNING_BOT_TOKENINGIZ")
+ADMIN_ID           = int(os.environ.get("ADMIN_ID", "123456789"))
 WEBAPP_URL         = os.environ.get("WEBAPP_URL", "https://YOUR_APP.railway.app")
 
 OFFICE_LAT       = float(os.environ.get("OFFICE_LAT", "41.2995"))
@@ -305,20 +305,21 @@ async def davomat_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # ─────────────────────────────────────────────
 #  MAIN
 # ─────────────────────────────────────────────
-def main():
+async def main():
     if TELEGRAM_BOT_TOKEN == "SIZNING_BOT_TOKENINGIZ":
         print("TELEGRAM_BOT_TOKEN ni kiriting!")
         return
 
-    app = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
-    app.add_handler(CommandHandler("start",   start))
-    app.add_handler(CommandHandler("davomat", davomat_cmd))
-    app.add_handler(CallbackQueryHandler(admin_callback, pattern="^admin_"))
-    app.add_handler(MessageHandler(filters.StatusUpdate.WEB_APP_DATA, webapp_data))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, admin_text))
+    application = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
+    application.add_handler(CommandHandler("start",   start))
+    application.add_handler(CommandHandler("davomat", davomat_cmd))
+    application.add_handler(CallbackQueryHandler(admin_callback, pattern="^admin_"))
+    application.add_handler(MessageHandler(filters.StatusUpdate.WEB_APP_DATA, webapp_data))
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, admin_text))
 
     print("Bot ishga tushdi!")
-    app.run_polling(allowed_updates=Update.ALL_TYPES)
+    await application.run_polling(allowed_updates=Update.ALL_TYPES)
 
 if __name__ == '__main__':
-    main()
+    import asyncio
+    asyncio.run(main())
