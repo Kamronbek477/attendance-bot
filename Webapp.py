@@ -1,5 +1,4 @@
 import os
-import threading
 from flask import Flask, render_template_string
 
 app = Flask(__name__)
@@ -92,7 +91,7 @@ function checkin() {
   if (!navigator.geolocation) {
     btn.disabled = false;
     btn.textContent = '✅ Ishga keldim';
-    setStatus('❌ Brauzeringiz GPS ni qollab-quvvatlamaydi', 'error');
+    setStatus('❌ GPS qollab-quvvatlanmaydi', 'error');
     return;
   }
 
@@ -114,9 +113,9 @@ function checkin() {
       btn.disabled = false;
       btn.textContent = '🔄 Qayta urinish';
       const msgs = {
-        1: '❌ GPS ruxsati berilmagan. Telefon sozlamalaridan ruxsat bering.',
-        2: '❌ Joylashuv aniqlanmadi. Tashqariga chiqib qayta urining.',
-        3: "❌ Vaqt tugadi. Qayta urinib ko'ring."
+        1: '❌ GPS ruxsati berilmagan. Sozlamalardan ruxsat bering.',
+        2: '❌ Joylashuv aniqlanmadi. Tashqariga chiqib urining.',
+        3: "❌ Vaqt tugadi. Qayta urining."
       };
       setStatus(msgs[err.code] || '❌ GPS xatosi', 'error');
     },
@@ -139,16 +138,6 @@ def health():
 def index():
     return "Davomat Bot ishlayapti!", 200
 
-def run_bot():
-    """Botni alohida threadda ishga tushirish"""
-    try:
-        from bot import main as bot_main
-        bot_main()
-    except Exception as e:
-        print(f"Bot xatosi: {e}")
-
 if __name__ == "__main__":
-    bot_thread = threading.Thread(target=run_bot, daemon=True)
-    bot_thread.start()
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=False)
