@@ -8,8 +8,8 @@ from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQu
 # ══════════════════════════════════════════════
 #  SOZLAMALAR
 # ══════════════════════════════════════════════
-TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "SIZNING_BOT_TOKENINGIZ")
-ADMIN_ID           = int(os.environ.get("ADMIN_ID", "123456789"))
+TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "6143132501:AAF-1TEVnNuKTR1sHT6-8lVo2MdSl9ZvyVM")
+ADMIN_ID           = int(os.environ.get("ADMIN_ID", "1993623102"))
 WEBAPP_URL         = os.environ.get("WEBAPP_URL", "https://YOUR_APP.railway.app")
 
 OFFICE_LAT       = float(os.environ.get("OFFICE_LAT", "41.2995"))
@@ -305,7 +305,7 @@ async def davomat_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # ─────────────────────────────────────────────
 #  MAIN
 # ─────────────────────────────────────────────
-async def main():
+def main():
     if TELEGRAM_BOT_TOKEN == "SIZNING_BOT_TOKENINGIZ":
         print("TELEGRAM_BOT_TOKEN ni kiriting!")
         return
@@ -318,8 +318,7 @@ async def main():
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, admin_text))
 
     print("Bot ishga tushdi!")
-    await application.run_polling(allowed_updates=Update.ALL_TYPES)
+    application.run_polling(allowed_updates=Update.ALL_TYPES)
 
-if __name__ == '__main__':
-    import asyncio
-    asyncio.run(main())
+if __name__ == "__main__":
+    main()

@@ -1,6 +1,5 @@
 import os
 import threading
-import asyncio
 from flask import Flask, render_template_string
 
 app = Flask(__name__)
@@ -141,16 +140,12 @@ def index():
     return "Davomat Bot ishlayapti!", 200
 
 def run_bot():
-    """Botni yangi event loop da ishga tushirish"""
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
+    """Botni alohida threadda ishga tushirish"""
     try:
         from bot import main as bot_main
-        loop.run_until_complete(bot_main())
+        bot_main()
     except Exception as e:
         print(f"Bot xatosi: {e}")
-    finally:
-        loop.close()
 
 if __name__ == "__main__":
     bot_thread = threading.Thread(target=run_bot, daemon=True)
