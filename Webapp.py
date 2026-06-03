@@ -110,6 +110,7 @@ function checkin() {
         btn.disabled = false; btn.textContent = 'Qayta'; return;
       }
       tg.sendData(JSON.stringify({lat: pos.coords.latitude, lon: pos.coords.longitude, accuracy: acc}));
+      tg.close();
     },
     function(err) {
       btn.disabled = false; btn.textContent = 'Qayta urinish';
