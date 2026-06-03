@@ -12,7 +12,9 @@ logging.basicConfig(format='%(asctime)s - %(levelname)s - %(message)s', level=lo
 # ══════════════════════════════════════════════
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "6143132501:AAF-1TEVnNuKTR1sHT6-8lVo2MdSl9ZvyVM")
 ADMIN_ID           = int(os.environ.get("ADMIN_ID", "1993623102"))
-WEBAPP_URL         = os.environ.get("WEBAPP_URL", "https://attendance-bot-ap2g.onrender.com") + "/checkin"
+WEBAPP_URL         = os.environ.get("WEBAPP_URL", "https://attendance-bot-ap2g.onrender.com/checkin")
+if not WEBAPP_URL.endswith("/checkin"):
+    WEBAPP_URL = WEBAPP_URL.rstrip("/") + "/checkin"
 OFFICE_LAT         = float(os.environ.get("OFFICE_LAT", "41.2995"))
 OFFICE_LON         = float(os.environ.get("OFFICE_LON", "69.2401"))
 OFFICE_NAME        = os.environ.get("OFFICE_NAME", "Bosh ofis")
