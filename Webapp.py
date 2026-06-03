@@ -311,7 +311,7 @@ if __name__ == "__main__":
         application.add_handler(MessageHandler(filters.StatusUpdate.WEB_APP_DATA, webapp_data))
         application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, admin_text))
         print("Bot ishga tushdi!")
-        application.run_polling(allowed_updates=Update.ALL_TYPES, stop_signals=[])
+        application.run_polling(allowed_updates=["message","callback_query","web_app_data"], stop_signals=[])
 
     bot_thread = threading.Thread(target=run_bot, daemon=True)
     bot_thread.start()
