@@ -298,12 +298,28 @@ def run_bot():
     asyncio.set_event_loop(loop)
     loop.run_until_complete(start_bot())
 
-bot_thread = threading.Thread(target=run_bot, daemon=True)
-bot_thread.start()
-
 # ─────────────────────────────────────────────
 #  MAIN
 # ─────────────────────────────────────────────
 if __name__ == "__main__":
+    import asyncio
+
     port = int(os.environ.get("PORT", 5000))
-    flask_app.run(host="0.0.0.0", port=port, debug=False, use_reloader=False)
+
+    # Flaskni background threadda ishga tushir
+    flask_thread = threading.Thread(
+        target=lambda: flask_app.run(host="0.0.0.0", port=port, debug=False, use_reloader=False),
+        daemon=True
+    )
+    flask_thread.start()
+    print(f"Flask {port} portda ishga tushdi!")
+
+    # Botni asosiy threadda ishga tushir
+    application = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
+    application.add_handler(CommandHandler("start",   start))
+    application.add_handler(CommandHandler("davomat", davomat_cmd))
+    application.add_handler(CallbackQueryHandler(admin_callback, pattern="^admin_"))
+    application.add_handler(MessageHandler(filters.StatusUpdate.WEB_APP_DATA, webapp_data))
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, admin_text))
+    print("Bot ishga tushdi!")
+    application.run_polling(allowed_updates=Update.ALL_TYPES)
