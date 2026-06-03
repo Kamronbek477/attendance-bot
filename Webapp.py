@@ -301,6 +301,9 @@ if __name__ == "__main__":
 
     # Botni background threadda ishga tushir
     def run_bot():
+        import asyncio
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
         application = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
         application.add_handler(CommandHandler("start",   start))
         application.add_handler(CommandHandler("davomat", davomat_cmd))
