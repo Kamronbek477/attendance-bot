@@ -302,24 +302,22 @@ def run_bot():
 #  MAIN
 # ─────────────────────────────────────────────
 if __name__ == "__main__":
-    import asyncio
-
     port = int(os.environ.get("PORT", 5000))
 
-    # Flaskni background threadda ishga tushir
-    flask_thread = threading.Thread(
-        target=lambda: flask_app.run(host="0.0.0.0", port=port, debug=False, use_reloader=False),
-        daemon=True
-    )
-    flask_thread.start()
-    print(f"Flask {port} portda ishga tushdi!")
+    # Botni background threadda ishga tushir
+    def run_bot():
+        application = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
+        application.add_handler(CommandHandler("start",   start))
+        application.add_handler(CommandHandler("davomat", davomat_cmd))
+        application.add_handler(CallbackQueryHandler(admin_callback, pattern="^admin_"))
+        application.add_handler(MessageHandler(filters.StatusUpdate.WEB_APP_DATA, webapp_data))
+        application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, admin_text))
+        print("Bot ishga tushdi!")
+        application.run_polling(allowed_updates=Update.ALL_TYPES)
 
-    # Botni asosiy threadda ishga tushir
-    application = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
-    application.add_handler(CommandHandler("start",   start))
-    application.add_handler(CommandHandler("davomat", davomat_cmd))
-    application.add_handler(CallbackQueryHandler(admin_callback, pattern="^admin_"))
-    application.add_handler(MessageHandler(filters.StatusUpdate.WEB_APP_DATA, webapp_data))
-    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, admin_text))
-    print("Bot ishga tushdi!")
-    application.run_polling(allowed_updates=Update.ALL_TYPES)
+    bot_thread = threading.Thread(target=run_bot, daemon=True)
+    bot_thread.start()
+
+    # Flaskni asosiy threadda ishga tushir — Render port ni ko'radi
+    print(f"Flask {port} portda ishga tushdi!")
+    flask_app.run(host="0.0.0.0", port=port, debug=False, use_reloader=False)
