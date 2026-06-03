@@ -12,7 +12,7 @@ logging.basicConfig(format='%(asctime)s - %(levelname)s - %(message)s', level=lo
 # ══════════════════════════════════════════════
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "6143132501:AAF-1TEVnNuKTR1sHT6-8lVo2MdSl9ZvyVM")
 ADMIN_ID           = int(os.environ.get("ADMIN_ID", "1993623102"))
-WEBAPP_URL         = os.environ.get("WEBAPP_URL", "https://attendance-bot-ap2g.onrender.com/checkin")
+WEBAPP_URL         = os.environ.get("WEBAPP_URL", "https://attendance-bot-ap2g.onrender.com") + "/checkin"
 OFFICE_LAT         = float(os.environ.get("OFFICE_LAT", "41.2995"))
 OFFICE_LON         = float(os.environ.get("OFFICE_LON", "69.2401"))
 OFFICE_NAME        = os.environ.get("OFFICE_NAME", "Bosh ofis")
@@ -96,23 +96,23 @@ function checkin() {
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner"></span>Aniqlanmoqda...';
   if (!navigator.geolocation) {
-    btn.disabled = false; btn.textContent = '✅ Ishga keldim';
-    setStatus('❌ GPS qollab-quvvatlanmaydi', 'error'); return;
+    btn.disabled = false; btn.textContent = 'Ishga keldim';
+    setStatus('GPS qollab-quvvatlanmaydi', 'error'); return;
   }
   navigator.geolocation.getCurrentPosition(
     function(pos) {
       const acc = Math.round(pos.coords.accuracy);
-      document.getElementById('accuracy').textContent = 'Aniqlik: ±' + acc + ' metr';
+      document.getElementById('accuracy').textContent = 'Aniqlik: +/-' + acc + ' metr';
       if (acc > 300) {
-        setStatus('⚠️ GPS zaif. Tashqariga chiqib urining.', 'error');
-        btn.disabled = false; btn.textContent = '🔄 Qayta'; return;
+        setStatus('GPS zaif. Tashqariga chiqib urining.', 'error');
+        btn.disabled = false; btn.textContent = 'Qayta'; return;
       }
       tg.sendData(JSON.stringify({lat: pos.coords.latitude, lon: pos.coords.longitude, accuracy: acc}));
     },
     function(err) {
-      btn.disabled = false; btn.textContent = '🔄 Qayta urinish';
-      const msgs = {1:'❌ GPS ruxsati yo\'q.', 2:'❌ Joylashuv aniqlanmadi.', 3:'❌ Vaqt tugadi.'};
-      setStatus(msgs[err.code] || '❌ GPS xatosi', 'error');
+      btn.disabled = false; btn.textContent = 'Qayta urinish';
+      const msgs = {1:'GPS ruxsati yoq.', 2:'Joylashuv aniqlanmadi.', 3:'Vaqt tugadi.'};
+      setStatus(msgs[err.code] || 'GPS xatosi', 'error');
     },
     {enableHighAccuracy: true, timeout: 15000, maximumAge: 0}
   );
@@ -146,7 +146,7 @@ def is_late(dt):
     return dt > dt.replace(hour=WORK_START_HOUR, minute=WORK_START_MIN, second=0, microsecond=0)
 
 def se(s):
-    return {"o_time":"✅","late":"⏰","absent":"❌"}.get(s,"❓")
+    return {"o_time": "✅", "late": "⏰", "absent": "❌"}.get(s, "❓")
 
 def checkin_kb():
     return InlineKeyboardMarkup([[InlineKeyboardButton("✅ Ishga keldim", web_app=WebAppInfo(url=WEBAPP_URL))]])
@@ -155,7 +155,7 @@ def admin_kb():
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("👥 Bugungi davomat", callback_data="admin_today")],
         [InlineKeyboardButton("📍 Ofis lokatsiyasi", callback_data="admin_setloc")],
-        [InlineKeyboardButton("📋 Xodimlar", callback_data="admin_users")],
+        [InlineKeyboardButton("📋 Xodimlar",         callback_data="admin_users")],
     ])
 
 # ─────────────────────────────────────────────
@@ -180,42 +180,47 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 parse_mode='Markdown', reply_markup=checkin_kb())
 
 async def webapp_data(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    uid  = update.effective_user.id
-    name = update.effective_user.full_name
+    uid   = update.effective_user.id
+    name  = update.effective_user.full_name
     today = today_str()
     if uid in attendance and today in attendance[uid]:
         rec = attendance[uid][today]
         await update.message.reply_text(
             f"ℹ️ *Allaqachon davomat qoldirdingiz!*\n{'─'*28}\n🕐 *{rec['time']}*\n{se(rec['status'])} *{rec['status_label']}*",
-            parse_mode='Markdown'); return
+            parse_mode='Markdown')
+        return
     try:
         import json
         payload = json.loads(update.effective_message.web_app_data.data)
         ulat, ulon = float(payload["lat"]), float(payload["lon"])
-    except Exception as e:
+    except Exception:
         await update.message.reply_text(
-            f"⚠️ *Xatolik!*\n{'─'*28}\nLokatsiya noto'g'ri keldi. Qayta urining.",
-            parse_mode='Markdown', reply_markup=checkin_kb()); return
+            f"⚠️ *Xatolik!*\n{'─'*28}\nLokatsiya noto'g'ri. Qayta urining.",
+            parse_mode='Markdown', reply_markup=checkin_kb())
+        return
 
     dist = int(haversine(ulat, ulon, office_loc['lat'], office_loc['lon']))
     now  = datetime.now()
     if dist > ALLOWED_RADIUS_M:
         await update.message.reply_text(
-            f"❌ *Davomat tasdiqlanmadi!*\n{'─'*28}\n📍 Ofis: *{office_loc['name']}*\n📏 Sizdan masofa: *{dist} metr*\n✅ Ruxsat: *{ALLOWED_RADIUS_M} metr*\n\n🚶 Yaqinlashib qayta urining.",
-            parse_mode='Markdown', reply_markup=checkin_kb()); return
+            f"❌ *Davomat tasdiqlanmadi!*\n{'─'*28}\n📍 Ofis: *{office_loc['name']}*\n📏 Masofa: *{dist} metr*\n✅ Ruxsat: *{ALLOWED_RADIUS_M} metr*\n\n🚶 Yaqinlashib qayta urining.",
+            parse_mode='Markdown', reply_markup=checkin_kb())
+        return
 
     late   = is_late(now)
     status = "late" if late else "o_time"
     label  = f"Kech keldi ({now.strftime('%H:%M')})" if late else f"O'z vaqtida ({now.strftime('%H:%M')})"
-    if uid not in attendance: attendance[uid] = {}
-    attendance[uid][today] = {"name":name,"time":now.strftime("%H:%M:%S"),"status":status,"status_label":label,"dist":dist}
+    if uid not in attendance:
+        attendance[uid] = {}
+    attendance[uid][today] = {"name": name, "time": now.strftime("%H:%M:%S"), "status": status, "status_label": label, "dist": dist}
     registered_users[uid] = name
 
     icon = "⏰" if late else "✅"
     await update.message.reply_text(
         f"{icon} *Davomat tasdiqlandi!*\n{'─'*28}\n👤 *{name}*\n🕐 *{now.strftime('%H:%M')}*\n📅 *{now.strftime('%d.%m.%Y')}*\n📍 *{dist} metr*\n📌 *{label}*",
         parse_mode='Markdown')
-    await context.bot.send_message(chat_id=ADMIN_ID,
+    await context.bot.send_message(
+        chat_id=ADMIN_ID,
         text=f"{icon} *Yangi davomat!*\n{'─'*28}\n👤 *{name}*\n🕐 *{now.strftime('%H:%M:%S')}*\n📅 {now.strftime('%d.%m.%Y')}\n📍 *{dist} metr*\n{se(status)} *{label}*",
         parse_mode='Markdown')
 
@@ -223,26 +228,34 @@ async def admin_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     q = update.callback_query
     await q.answer()
     if q.from_user.id != ADMIN_ID:
-        await q.message.reply_text("❌ Admin huquqi yo'q!"); return
+        await q.message.reply_text("❌ Admin huquqi yo'q!")
+        return
     today = today_str()
     if q.data == "admin_today":
         recs = {u: d[today] for u, d in attendance.items() if today in d}
         if not recs:
-            await q.message.reply_text(f"📋 *{datetime.now().strftime('%d.%m.%Y')}*\n\n😶 Hali hech kim kelmagan.",
-                parse_mode='Markdown', reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔄 Yangilash", callback_data="admin_today")]])); return
-        ot = sum(1 for r in recs.values() if r['status']=='o_time')
-        lt = sum(1 for r in recs.values() if r['status']=='late')
-        lines = [f"📋 *{datetime.now().strftime('%d.%m.%Y')}*\n", f"✅ O'z vaqtida: *{ot}*", f"⏰ Kech: *{lt}*", f"👥 Jami: *{len(recs)}*\n", "─"*24]
+            await q.message.reply_text(
+                f"📋 *{datetime.now().strftime('%d.%m.%Y')}*\n\n😶 Hali hech kim kelmagan.",
+                parse_mode='Markdown',
+                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔄 Yangilash", callback_data="admin_today")]]))
+            return
+        ot = sum(1 for r in recs.values() if r['status'] == 'o_time')
+        lt = sum(1 for r in recs.values() if r['status'] == 'late')
+        lines = [f"📋 *{datetime.now().strftime('%d.%m.%Y')}*\n",
+                 f"✅ O'z vaqtida: *{ot}*", f"⏰ Kech: *{lt}*", f"👥 Jami: *{len(recs)}*\n", "─" * 24]
         for r in sorted(recs.values(), key=lambda x: x['time']):
             lines.append(f"{se(r['status'])} *{r['name']}*\n   🕐 {r['time'][:5]}  📍 {r['dist']} m")
         await q.message.reply_text("\n".join(lines), parse_mode='Markdown',
-            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔄 Yangilash", callback_data="admin_today"), InlineKeyboardButton("🏠 Menyu", callback_data="admin_menu")]]))
+            reply_markup=InlineKeyboardMarkup([[
+                InlineKeyboardButton("🔄 Yangilash", callback_data="admin_today"),
+                InlineKeyboardButton("🏠 Menyu",     callback_data="admin_menu")]]))
     elif q.data == "admin_setloc":
         context.user_data['setting_loc'] = True
         await q.message.reply_text("📍 Koordinatani yuboring:\nFormat: `LAT LON`\nMisol: `41.2995 69.2401`", parse_mode='Markdown')
     elif q.data == "admin_users":
         if not registered_users:
-            await q.message.reply_text("👥 Hali hech kim yo'q."); return
+            await q.message.reply_text("👥 Hali hech kim yo'q.")
+            return
         lines = ["👥 *Xodimlar:*\n"]
         for i, (uid2, uname) in enumerate(registered_users.items(), 1):
             rec = attendance.get(uid2, {}).get(today)
@@ -254,49 +267,29 @@ async def admin_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def admin_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     uid = update.effective_user.id
-    if uid != ADMIN_ID or not context.user_data.get('setting_loc'): return
+    if uid != ADMIN_ID or not context.user_data.get('setting_loc'):
+        return
     try:
         parts = update.message.text.strip().split()
         lat, lon = float(parts[0]), float(parts[1])
         office_loc['lat'], office_loc['lon'] = lat, lon
         context.user_data['setting_loc'] = False
-        await update.message.reply_text(f"✅ *Ofis saqlandi!*\n📍 `{lat}, {lon}`\n📏 Radius: *{ALLOWED_RADIUS_M} m*", parse_mode='Markdown', reply_markup=admin_kb())
-    except:
+        await update.message.reply_text(
+            f"✅ *Ofis saqlandi!*\n📍 `{lat}, {lon}`\n📏 Radius: *{ALLOWED_RADIUS_M} m*",
+            parse_mode='Markdown', reply_markup=admin_kb())
+    except Exception:
         await update.message.reply_text("❌ Noto'g'ri format. Misol: `41.2995 69.2401`", parse_mode='Markdown')
 
 async def davomat_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    uid = update.effective_user.id
+    uid   = update.effective_user.id
     today = today_str()
     if uid in attendance and today in attendance[uid]:
         rec = attendance[uid][today]
-        await update.message.reply_text(f"📋 *Bugungi davomat*\n{'─'*28}\n🕐 *{rec['time'][:5]}*\n{se(rec['status'])} *{rec['status_label']}*", parse_mode='Markdown')
+        await update.message.reply_text(
+            f"📋 *Bugungi davomat*\n{'─'*28}\n🕐 *{rec['time'][:5]}*\n{se(rec['status'])} *{rec['status_label']}*",
+            parse_mode='Markdown')
     else:
         await update.message.reply_text("❗ Bugun davomat qoldirmadingiz.", reply_markup=checkin_kb())
-
-# ─────────────────────────────────────────────
-#  BOT THREAD
-# ─────────────────────────────────────────────
-def run_bot():
-    import asyncio
-
-    async def start_bot():
-        application = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
-        application.add_handler(CommandHandler("start",   start))
-        application.add_handler(CommandHandler("davomat", davomat_cmd))
-        application.add_handler(CallbackQueryHandler(admin_callback, pattern="^admin_"))
-        application.add_handler(MessageHandler(filters.StatusUpdate.WEB_APP_DATA, webapp_data))
-        application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, admin_text))
-        print("Bot ishga tushdi!")
-        async with application:
-            await application.initialize()
-            await application.start()
-            await application.updater.start_polling(allowed_updates=Update.ALL_TYPES)
-            while True:
-                await asyncio.sleep(3600)
-
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    loop.run_until_complete(start_bot())
 
 # ─────────────────────────────────────────────
 #  MAIN
@@ -318,6 +311,6 @@ if __name__ == "__main__":
     bot_thread = threading.Thread(target=run_bot, daemon=True)
     bot_thread.start()
 
-    # Flaskni asosiy threadda ishga tushir — Render port ni ko'radi
+    # Flaskni asosiy threadda ishga tushir
     print(f"Flask {port} portda ishga tushdi!")
     flask_app.run(host="0.0.0.0", port=port, debug=False, use_reloader=False)
