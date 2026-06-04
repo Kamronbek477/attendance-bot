@@ -198,17 +198,27 @@ function photoSelected(input) {
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner"></span>Rasm yuklanmoqda...';
 
-  const reader = new FileReader();
-  reader.onload = function(e) {
-    photoB64 = e.target.result.split(',')[1];
+  const img = new Image();
+  const url = URL.createObjectURL(file);
+  img.onload = function() {
+    const canvas = document.createElement('canvas');
+    const MAX = 600;
+    let w = img.width, h = img.height;
+    if (w > h) { if (w > MAX) { h = h * MAX / w; w = MAX; } }
+    else { if (h > MAX) { w = w * MAX / h; h = MAX; } }
+    canvas.width = w; canvas.height = h;
+    canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+    photoB64 = dataUrl.split(',')[1];
     const preview = document.getElementById('preview');
-    preview.src = e.target.result;
+    preview.src = dataUrl;
     preview.style.display = 'block';
     document.getElementById('photoStatus').textContent = 'Rasm tayyor';
     document.getElementById('photoStatus').className = 'status success';
+    URL.revokeObjectURL(url);
     setStep(3);
   };
-  reader.readAsDataURL(file);
+  img.src = url;
 }
 
 function sendAll() {
