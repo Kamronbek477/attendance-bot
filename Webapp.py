@@ -226,11 +226,12 @@ function sendAll() {
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner"></span>Yuborilmoqda...';
 
+  // Faqat GPS yuboramiz (rasm keyinroq bot so'raydi)
   const payload = {
     lat: gpsData.lat,
     lon: gpsData.lon,
     accuracy: gpsData.acc,
-    photo: photoB64
+    has_photo: photoB64 ? true : false
   };
 
   tg.sendData(JSON.stringify(payload));
@@ -432,8 +433,8 @@ async def webapp_data(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"📌 *{label}*",
         parse_mode='Markdown')
 
-    # Adminga rasm + ma'lumot
-    admin_text = (
+    # Adminga ma'lumot
+    admin_msg = (
         f"{icon} *Yangi davomat!*\n"
         f"{'─'*28}\n"
         f"👤 *{name}*\n"
@@ -443,20 +444,15 @@ async def webapp_data(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"📍 *{dist} metr*\n"
         f"{se(status)} *{label}*"
     )
+    await context.bot.send_message(chat_id=ADMIN_ID, text=admin_msg, parse_mode='Markdown')
 
-    if photo:
-        try:
-            photo_bytes = base64.b64decode(photo)
-            await context.bot.send_photo(
-                chat_id=ADMIN_ID,
-                photo=photo_bytes,
-                caption=admin_text,
-                parse_mode='Markdown'
-            )
-        except Exception:
-            await context.bot.send_message(chat_id=ADMIN_ID, text=admin_text, parse_mode='Markdown')
-    else:
-        await context.bot.send_message(chat_id=ADMIN_ID, text=admin_text, parse_mode='Markdown')
+    # Xodimdan rasm so'rash
+    context.user_data['awaiting_photo'] = True
+    await update.message.reply_text(
+        "📸 *Iltimos, hozir kamera orqali rasm yuboring:*\n\n"
+        "_Telegramdan 📎 → Kamera → rasm oling va yuboring_",
+        parse_mode='Markdown'
+    )
 
 # ─────────────────────────────────────────────
 #  ADMIN CALLBACK
@@ -538,6 +534,40 @@ async def admin_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception:
         await update.message.reply_text("❌ Format: `41.2995 69.2401`", parse_mode='Markdown')
 
+async def receive_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    uid  = update.effective_user.id
+    name = users.get(uid, {}).get('name', update.effective_user.full_name)
+
+    if not context.user_data.get('awaiting_photo'):
+        return
+
+    context.user_data['awaiting_photo'] = False
+    today = today_str()
+    rec   = attendance.get(uid, {}).get(today)
+
+    if not rec:
+        return
+
+    try:
+        photo = update.message.photo[-1]
+        caption = (
+            f"📸 *Davomat rasmi*\n"
+            f"{'─'*28}\n"
+            f"👤 *{name}*\n"
+            f"🕐 *{rec['time'][:5]}*\n"
+            f"📅 {today}\n"
+            f"{se(rec['status'])} *{rec['status_label']}*"
+        )
+        await context.bot.send_photo(
+            chat_id=ADMIN_ID,
+            photo=photo.file_id,
+            caption=caption,
+            parse_mode='Markdown'
+        )
+        await update.message.reply_text("✅ *Rasm qabul qilindi!*", parse_mode='Markdown')
+    except Exception as e:
+        await update.message.reply_text("⚠️ Rasm yuborishda xato. Qayta yuboring.")
+
 async def davomat_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     uid   = update.effective_user.id
     today = today_str()
@@ -574,6 +604,7 @@ if __name__ == "__main__":
         application.add_handler(CommandHandler("davomat", davomat_cmd))
         application.add_handler(CallbackQueryHandler(admin_callback, pattern="^admin_"))
         application.add_handler(MessageHandler(filters.StatusUpdate.WEB_APP_DATA, webapp_data))
+        application.add_handler(MessageHandler(filters.PHOTO, receive_photo))
         application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, admin_text))
         print("Bot ishga tushdi!")
         application.run_polling(
